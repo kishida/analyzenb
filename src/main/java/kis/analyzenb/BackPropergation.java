@@ -5,9 +5,6 @@
  */
 package kis.analyzenb;
 
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 
@@ -15,9 +12,8 @@ import java.util.Map;
  *
  * @author naoki
  */
-public class BackPropergation {
+public class BackPropergation extends LearningMachine {
 
-    List<Map.Entry<Integer, double[]>> patterns = new ArrayList<>();
     double[][] w;//入力→中間層の係数
     double[] hidden;//中間層→出力の係数
     int dim;//入力パラメータ数
@@ -39,11 +35,7 @@ public class BackPropergation {
         }
     }
 
-
-
-    public void learn(int cls, double[] data) {
-        int yi = cls == 1 ? 1 : 0;
-        AbstractMap.SimpleEntry<Integer, double[]> entry = new AbstractMap.SimpleEntry<>(yi, data);
+    public void learn(Map.Entry<Integer, double[]> entry) {
 
         final double k = .3;//学習係数
 
@@ -116,4 +108,20 @@ public class BackPropergation {
         }
         return (sigmoid(out) > .5) ? 1 : -1;
     }
+
+    @Override
+    public void learn() {
+        for (int i = 0; i < 100; ++i) {
+            System.out.println(i);
+            patterns.forEach(this::learn);
+        }
+    }
+
+    @Override
+    public void addData(int cls, double[] data) {
+        int yi = cls == 1 ? 1 : 0;
+        super.addData(yi, data); //To change body of generated methods, choose Tools | Templates.
+    }
+
+
 }

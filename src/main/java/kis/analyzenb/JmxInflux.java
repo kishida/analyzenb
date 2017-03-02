@@ -40,7 +40,7 @@ public class JmxInflux {
         ThreadMXBean threadBean = ManagementFactory.newPlatformMXBeanProxy(
                 mbeanConn, ManagementFactory.THREAD_MXBEAN_NAME, ThreadMXBean.class);
 
-        InfluxDB influx = InfluxDBFactory.connect("http://192.168.56.103:8086", "root", "root");
+        InfluxDB influx = InfluxDBFactory.connect("http://localhost:8086", "root", "root");
         influx.createDatabase("nblog");
         
         ScheduledThreadPoolExecutor executor = (ScheduledThreadPoolExecutor) 

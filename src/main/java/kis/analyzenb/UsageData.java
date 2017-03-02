@@ -29,15 +29,16 @@ import org.influxdb.dto.QueryResult;
  */
 public class UsageData {
     public static void main(String[] args) {
-        InfluxDB influx = InfluxDBFactory.connect("http://192.168.56.103:8086", "root", "root");
-        Query q = new Query("SELECT heap FROM memory where time > now() - 120m and time < now() - 40m ", "nblog");
+        InfluxDB influx = InfluxDBFactory.connect("http://localhost:8086", "root", "root");
+        String timeRange = "time > '2017-03-02T00:57:00Z' and time < '2017-03-02T11:00:00Z'";
+        Query q = new Query("SELECT heap FROM memory where " + timeRange, "nblog");
         QueryResult result = influx.query(q);
         TreeMap<ZonedDateTime, Double> memories = result.getResults().stream().flatMap(rs -> rs.getSeries().stream())
                 .flatMap(s -> s.getValues().stream())
                 .collect(Collectors.toMap(v -> ZonedDateTime.parse(v.get(0).toString(), DateTimeFormatter.ISO_DATE_TIME),
                         v -> (Double)v.get(1), (a, b) -> a, () -> new TreeMap<>()));
         
-        Query q2 = new Query("SELECT count FROM thread where time > now() - 121m", "nblog");
+        Query q2 = new Query("SELECT count FROM thread where " + timeRange, "nblog");
         QueryResult result2 = influx.query(q2);
         TreeMap<ZonedDateTime, Double> threads = result2.getResults().stream().flatMap(rs -> rs.getSeries().stream())
                 .flatMap(s -> s.getValues().stream())
@@ -52,15 +53,15 @@ public class UsageData {
                                 .map(ent -> ent.getValue()).collect(Collectors.toList()))))
                 .collect(Collectors.toMap(ent -> ent.getKey(), ent -> ent.getValue()));
         
-        BackPropergation bp = new BackPropergation(10, 5);
+        LearningMachine bp = new SMO();//new BackPropergation(10, 5);
         heaps.forEach((time, wv) -> {
             Double th = threads.get(time);
-            System.out.println(th + ":" + (th > 32));
-            bp.learn(th > 33 ? 1 : 0, wv.stream().mapToDouble(f -> f.get(0)).toArray());
+            //System.out.println(th + ":" + (th > 32));
+            bp.addData(th > 45 ? 1 : 0, wavletToArray(wv));
         });
+        bp.learn();
 
-
-        Query q3 = new Query("SELECT heap FROM memory where time > now() - 120m ", "nblog");
+        Query q3 = new Query("SELECT heap FROM memory where " + timeRange, "nblog");
         QueryResult result3 = influx.query(q3);
         TreeMap<ZonedDateTime, Double> m3 = result3.getResults().stream().flatMap(rs -> rs.getSeries().stream())
                 .flatMap(s -> s.getValues().stream())
@@ -83,7 +84,7 @@ public class UsageData {
 
             Point working = Point.measurement("analyse")
                     .time(time.toEpochSecond(), TimeUnit.SECONDS)
-                    .addField("working", bp.trial(wv.stream().mapToDouble(f -> f.get(0)).toArray()))
+                    .addField("working_svm512_5per", bp.trial(wavletToArray(wv)))
                     .build();
             batch.point(working);
             influx.write(batch);
@@ -105,5 +106,10 @@ public class UsageData {
         }
         wavlets.add(data);
         return wavlets;
+    }
+
+    static double[] wavletToArray(List<List<Double>> wavlet) {
+        return wavlet.stream().flatMap(List::stream).mapToDouble(d -> d).toArray();
+        //return wavlet.stream().mapToDouble(f -> f.get(0)).toArray();
     }
 }
